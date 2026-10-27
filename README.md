@@ -19,6 +19,7 @@ RecoverAI is **NOT** a system that attempts to diagnose gateway decline codes or
 4. **Omnichannel Telecom Execution (Twilio)**:
    - **Twilio Voice**: Places real outbound phone calls speaking in natural Indian Hinglish using Amazon Polly *Aditi*, listens to customer speech using speech recognition, and answers incoming customer calls.
    - **Twilio WhatsApp**: Dispatches personalized recovery messages with 1-click Razorpay checkout links and listens to customer WhatsApp replies.
+   - ALL TWILIO SREVICES ARE PAID I MADE THE INTERFACE FOR CALLING AND MESSAGING 
 5. **Policy Guardrails**: Programmatically enforces quiet hours (no outreach 9:00 PM - 9:00 AM), anti-spam limits (max 2 WhatsApp, max 1 Voice), and mandatory 6-hour cooldown periods.
 6. **Revenue Attribution**: When the customer pays using the recovery link, Razorpay's `payment.captured` event is attributed to the winning channel (Voice / WhatsApp / SMS) and marked as Recovered Revenue.
 
