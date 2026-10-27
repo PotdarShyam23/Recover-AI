@@ -15,6 +15,7 @@ app.use(cors({
   origin: true,
   credentials: true
 }));
+app.options('*', cors());
 
 // Parse JSON bodies with rawBody preserved for Razorpay HMAC verification
 app.use(express.json({

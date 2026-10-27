@@ -1,7 +1,35 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 
-  (typeof window !== 'undefined' && window.location.port === '5173' 
-    ? 'http://localhost:4001/api' 
-    : '/api');
+// Dynamically resolve Backend API URL from environment variables for Render / Production
+function resolveApiBase() {
+  const envUrl = 
+    import.meta.env.VITE_API_BASE ||
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_BACKEND_URL ||
+    import.meta.env.VITE_API_KEY; // Supported in case set on Render
+
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    let clean = envUrl.trim().replace(/\/+$/, '');
+    // If full domain without /api (e.g. https://xyz.onrender.com), append /api
+    if (!clean.endsWith('/api')) {
+      clean = `${clean}/api`;
+    }
+    return clean;
+  }
+
+  // Local development fallback when running Vite dev server (port 5173)
+  if (typeof window !== 'undefined' && window.location.port === '5173') {
+    return 'http://localhost:4001/api';
+  }
+
+  // Same-origin relative path for unified deployment (e.g. Express serving frontend static build)
+  return '/api';
+}
+
+export const API_BASE = resolveApiBase();
+export const BACKEND_BASE = API_BASE.replace(/\/api$/, '');
+
+if (typeof window !== 'undefined') {
+  console.log(`[RecoverAI] API Base URL configured: ${API_BASE}`);
+}
 
 async function fetchJson(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;

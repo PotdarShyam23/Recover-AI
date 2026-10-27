@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { BACKEND_BASE } from '../services/api';
 
 const QUICK_RESPONSES = [
   'Salary 10th ko aane wali hai, tab 100% complete kar dunga.',
@@ -31,9 +32,7 @@ export default function VoiceCallModal({ isOpen, onClose, customerName, amount, 
         audioRef.current = null;
       }
 
-      const baseUrl = typeof window !== 'undefined' && window.location.port === '5173'
-        ? 'http://localhost:4001'
-        : '';
+      const baseUrl = BACKEND_BASE;
       const audioUrl = `${baseUrl}/api/voice/tts?lang=hi&text=${encodeURIComponent(text.slice(0, 200))}`;
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
