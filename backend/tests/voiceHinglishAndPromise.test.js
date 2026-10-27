@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { simulateHinglishVoiceCall, parseCustomerIntent } from '../src/services/aiService.js';
+import { simulateVoiceConversation } from '../src/services/voiceService.js';
 import recoveryEngine from '../src/services/recoveryEngine.js';
 import { dbStore } from '../src/db/store.js';
 
@@ -61,4 +62,30 @@ test('Revenue Recovery Attribution - payment.captured event', async () => {
   assert.equal(recoveryResult.caseRecord.status, 'RECOVERED');
   assert.equal(recoveryResult.caseRecord.recoveredAmount, 8500);
   assert.equal(recoveryResult.caseRecord.winningChannel, 'whatsapp');
+});
+
+test('VoiceService - Dynamic Voice Conversation Response to Customer Input', async () => {
+  const caseId = `RC_voice_dyn_${Date.now()}`;
+  const mockCase = {
+    id: caseId,
+    merchantId: 'mer_default_101',
+    customerId: 'CUST-1001',
+    amount: 6000,
+    currency: 'INR',
+    status: 'OPEN',
+    voiceAttempts: 0
+  };
+  await dbStore.saveCase(mockCase);
+
+  const result = await simulateVoiceConversation({
+    caseRecord: mockCase,
+    userResponse: 'Abhi travel kar raha hoon, Monday shaam tak payment 100% complete kar dunga.'
+  });
+
+  assert.equal(result.channel, 'voice');
+  assert.equal(result.status, 'completed');
+  assert.ok(result.agentReply.length > 0);
+  assert.equal(result.extractedIntent, 'promise_to_pay');
+  assert.ok(result.promisedDate !== null);
+  assert.ok(result.promiseRecord !== null);
 });

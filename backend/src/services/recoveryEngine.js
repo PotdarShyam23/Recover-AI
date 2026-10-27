@@ -3,6 +3,7 @@ import { decideRecoveryStrategy, generateOutreachMessage, simulateHinglishVoiceC
 import { evaluatePolicyGuardrails } from './recoveryPolicy.js';
 import razorpayProvider from '../adapters/payment/razorpayProvider.js';
 import twilioWhatsAppService from './twilioWhatsAppService.js';
+import { simulateVoiceConversation } from './voiceService.js';
 
 export class RecoveryEngine {
   /**
@@ -222,82 +223,21 @@ export class RecoveryEngine {
   /**
    * Executes Hinglish AI Voice Agent call
    */
-  // invoke the function send required info to the aiservice.js 
+  // invoke the function send required info to the voiceService.js / aiservice.js 
   async executeHinglishVoiceCall(caseRecord, customerRecord, userResponseSimulation = null) {
-    const merchant = (await dbStore.getMerchant()) || { name: 'SaaSify India' };
-    const customer = customerRecord || (await dbStore.getCustomer(caseRecord.customerId)) || {
-      name: 'Customer',
-      phone: '+919876543210',
-      email: 'customer@example.com',
-      paymentHistory: []
-    };
-
-    // Run AGENT 3: Hinglish Voice Agent in aiservice.js
-    const voiceResult = await simulateHinglishVoiceCall({
-      customerName: customer.name || 'Customer',
-      merchantName: merchant.name,
-      amount: caseRecord.amount,
-      currency: caseRecord.currency,
-      customerHistory: customer.paymentHistory || [],
-      userResponseSimulation
+    const customer = customerRecord || (await dbStore.getCustomer(caseRecord.customerId));
+    
+    // Delegate to voiceService.simulateVoiceConversation which dynamically uses Gemini AI
+    const voiceResult = await simulateVoiceConversation({
+      caseRecord,
+      customerRecord: customer,
+      userResponse: userResponseSimulation
     });
 
-    // Update case counters
-    caseRecord.attemptCount = (caseRecord.attemptCount || 0) + 1;
-    caseRecord.voiceAttempts = (caseRecord.voiceAttempts || 0) + 1;
-    caseRecord.status = 'VOICE_ENGAGED';
-    await dbStore.saveCase(caseRecord);
-
-    // Log voice interaction
-    const commLog = {
-      id: `comm_voice_${Date.now()}`,
-      caseId: caseRecord.id,
-      customerId: customer.id || caseRecord.customerId,
-      channel: 'voice',
-      direction: 'OUTBOUND',
-      recipient: customer.phone || '+919876543210',
-      messageText: voiceResult.summary,
-      paymentLink: caseRecord.recoveryLinkUrl,
-      status: 'COMPLETED',
-      metadata: {
-        transcript: voiceResult.transcript,
-        sentiment: voiceResult.sentiment,
-        extractedIntent: voiceResult.extractedIntent
-      }
+    return {
+      voiceResult,
+      promiseRecord: voiceResult.promiseRecord
     };
-    await dbStore.logCommunication(commLog);
-
-    // If promise extracted, save to Promise Tracker
-    let promiseRecord = null;
-    if (voiceResult.extractedIntent === 'promise_to_pay' && voiceResult.promisedDate) {
-      promiseRecord = {
-        id: `prom_${Date.now()}`,
-        caseId: caseRecord.id,
-        customerId: customer.id || caseRecord.customerId,
-        promisedDate: voiceResult.promisedDate,
-        confidence: voiceResult.confidence,
-        status: 'PENDING',
-        sourceChannel: 'voice',
-        sourceText: voiceResult.summary,
-        extractedIntent: 'promise_to_pay'
-      };
-      await dbStore.savePromise(promiseRecord);
-      caseRecord.status = 'PROMISE_PENDING';
-      await dbStore.saveCase(caseRecord);
-    }
-
-    // Audit log
-    await dbStore.logAudit({
-      caseId: caseRecord.id,
-      merchantId: caseRecord.merchantId,
-      eventType: 'VOICE_CALL_COMPLETED',
-      action: 'voice',
-      actor: 'AI_VOICE_AGENT',
-      description: `Hinglish AI Voice Agent completed conversation. Sentiment: ${voiceResult.sentiment}. ${promiseRecord ? `Promise captured for ${voiceResult.promisedDate}` : ''}`,
-      metadata: { voiceResult, promiseRecord }
-    });
-
-    return { voiceResult, promiseRecord };
   }
 
   /**

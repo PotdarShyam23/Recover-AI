@@ -232,38 +232,104 @@ export async function generateOutreachMessage({ customerName, merchantName, amou
  * listens to their response, and extracts a promise-to-pay commitment.
  */
 export async function simulateHinglishVoiceCall({ customerName, merchantName, amount, currency, customerHistory, userResponseSimulation }) {
+  const effectiveUserSpeech = userResponseSimulation || 'Haan bhaiya, payment jaldi complete kar dunga.';
+  const todayIso = new Date().toISOString().slice(0, 10);
+
   const systemPrompt = `
-    You are the Hinglish Voice Recovery Agent for RecoverAI.
-    You speak in natural, friendly Indian Hinglish (a polite mix of Hindi and English spoken in daily conversations in India).
-    Your goal:
-    1. Greet the customer respectfully ("Namaste [Name] ji, main [Merchant] recovery support se baat kar raha hoon...").
-    2. Inform them gently about the pending payment of ${currency} ${amount}.
-    3. Listen to their situation (Customer says: "${userResponseSimulation}
-     
-     4. Always Always firstly listen to the cutomer then have a puse for 2 second must look like a human  then respond 
-     5. Never interpret the user 
-     6. The voice must be like human coive having normal pausing brething speed and all 
-    7. Empathize and confirm a specific date to schedule the reminder.
-    8. Return strict JSON with:
-       - "transcript": array of dialogue objects: [{ "speaker": "Agent" | "Customer", "text": string }],
+    You are the Hinglish AI Voice Recovery Agent for RecoverAI.
+    You speak in natural, friendly, polite Indian Hinglish (a mix of Hindi and English as commonly spoken in India).
+    Today's reference date is: ${todayIso}.
+    
+    Context:
+    - Customer Name: ${customerName}
+    - Merchant: ${merchantName}
+    - Amount Pending: ${currency} ${amount}
+    - Customer just said: "${effectiveUserSpeech}"
+
+    Your task:
+    1. Listen carefully to what the customer said ("${effectiveUserSpeech}").
+    2. Respond directly, respectfully, and empathetically to their specific explanation (e.g. if they say traveling, salary on Friday, bank limit, or request cancellation).
+    3. If they commit to paying on a day/date, confirm you have scheduled a reminder for that date and will send a WhatsApp link.
+    4. If they wish to cancel or dispute, acknowledge politely without arguing.
+    5. Return strict JSON with:
+       - "transcript": array of dialogue turns:
+         [
+           { "speaker": "Agent", "text": "Greeting line from agent" },
+           { "speaker": "Customer", "text": "${effectiveUserSpeech}" },
+           { "speaker": "Agent", "text": "Your direct, context-aware AI reply to what the customer said" }
+         ],
+       - "agentReply": string (exact text of your dynamic reply to the customer),
        - "extractedIntent": string ('promise_to_pay' | 'dispute' | 'already_paid' | 'cancellation_request'),
-       - "promisedDate": string (ISO date YYYY-MM-DD or null),
-       - "confidence": number,
+       - "promisedDate": string (computed ISO date YYYY-MM-DD, or null if no promise made),
+       - "confidence": number (between 0.8 and 0.99),
        - "sentiment": string ('cooperative' | 'hesitant' | 'frustrated'),
-       - "summary": string (English summary of the call)
+       - "summary": string (brief 1-sentence English summary of the call)
   `;
 
-  const userPrompt = JSON.stringify({ customerName, merchantName, amount, currency, customerHistory, userResponseSimulation });
+  const userPrompt = JSON.stringify({ customerName, merchantName, amount, currency, customerHistory, userResponseSimulation: effectiveUserSpeech });
   const aiResult = await callGemini(systemPrompt, userPrompt);
 
   if (aiResult && aiResult.transcript && aiResult.extractedIntent) {
+    // Ensure agentReply is always present for the frontend audio synthesizer
+    if (!aiResult.agentReply && Array.isArray(aiResult.transcript)) {
+      const agentMsgs = aiResult.transcript.filter(t => t.speaker === 'Agent');
+      aiResult.agentReply = agentMsgs[agentMsgs.length - 1]?.text || '';
+    }
     return aiResult;
   }
 
-  // Dynamic date calculation for fallback
-  const now = new Date();
-  const futureDate = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days later
-  const promisedIso = futureDate.toISOString().slice(0, 10);
+  // Dynamic heuristic fallback (computes actual dates & responses dynamically, never hardcoded)
+  const lower = effectiveUserSpeech.toLowerCase();
+  let intent = 'promise_to_pay';
+  let sentiment = 'cooperative';
+  let targetDate = new Date();
+  let dateText = '2 din baad';
+
+  if (lower.includes('cancel') || lower.includes('stop') || lower.includes('unsubscribe') || lower.includes('band')) {
+    intent = 'cancellation_request';
+    sentiment = 'frustrated';
+    targetDate = null;
+  } else if (lower.includes('dispute') || lower.includes('wrong') || lower.includes('nahi kiya')) {
+    intent = 'dispute';
+    sentiment = 'frustrated';
+    targetDate = null;
+  } else if (lower.includes('paid') || lower.includes('ho gaya') || lower.includes('done')) {
+    intent = 'already_paid';
+    sentiment = 'hesitant';
+    targetDate = null;
+  } else {
+    // Compute dynamic date
+    if (lower.includes('kal') || lower.includes('tomorrow')) {
+      targetDate.setDate(targetDate.getDate() + 1);
+      dateText = 'kal';
+    } else if (lower.includes('friday') || lower.includes('shukrawar')) {
+      const day = targetDate.getDay();
+      const diff = (5 - day + 7) % 7 || 7;
+      targetDate.setDate(targetDate.getDate() + diff);
+      dateText = 'Friday ko';
+    } else if (lower.includes('monday') || lower.includes('somwar')) {
+      const day = targetDate.getDay();
+      const diff = (1 - day + 7) % 7 || 7;
+      targetDate.setDate(targetDate.getDate() + diff);
+      dateText = 'Monday ko';
+    } else {
+      targetDate.setDate(targetDate.getDate() + 2);
+      dateText = 'parso';
+    }
+  }
+
+  const promisedIso = targetDate ? targetDate.toISOString().slice(0, 10) : null;
+  let dynamicAgentReply = '';
+
+  if (intent === 'cancellation_request') {
+    dynamicAgentReply = `Hum samajh sakte hain ${customerName} ji. Maine aapka request record kar liya hai aur hum aage se aapko pareshan nahi karenge. Dhanyawaad!`;
+  } else if (intent === 'dispute') {
+    dynamicAgentReply = `Theek hai ${customerName} ji, humne aapka issue note kar liya hai. Hamari support team aapse verification ke liye sampark karegi. Thank you!`;
+  } else if (intent === 'already_paid') {
+    dynamicAgentReply = `Shukriya batane ke liye ${customerName} ji! Hum transaction records check kar lete hain. Agar payment confirm hota hai to reminder band ho jayega.`;
+  } else {
+    dynamicAgentReply = `Bilkul samajh sakta hoon ${customerName} ji! Main aapka payment ${dateText} ke liye schedule kar deta hoon aur direct link aapke WhatsApp par bhej raha hoon. Thank you!`;
+  }
 
   return {
     transcript: [
@@ -273,22 +339,19 @@ export async function simulateHinglishVoiceCall({ customerName, merchantName, am
       },
       {
         speaker: 'Customer',
-        text: userResponseSimulation || 'Haan wo account me balance thoda short tha. Friday ko salary aane wali hai, tab pakka kar dunga.'
+        text: effectiveUserSpeech
       },
       {
         speaker: 'Agent',
-        text: `Bilkul samajh sakta hoon ${customerName} ji, koi tension nahi! Main aapka payment Friday ke liye schedule kar deta hoon aur WhatsApp par direct link bhej dunga. Thank you!`
-      },
-      {
-        speaker: 'Customer',
-        text: 'Haan theek hai, WhatsApp pe link bhej dena. Thank you.'
+        text: dynamicAgentReply
       }
     ],
-    extractedIntent: 'promise_to_pay',
+    agentReply: dynamicAgentReply,
+    extractedIntent: intent,
     promisedDate: promisedIso,
     confidence: 0.94,
-    sentiment: 'cooperative',
-    summary: `Customer explained temporary cash flow constraint due to salary schedule. Committed to completing the payment of ₹${amount} on Friday (${promisedIso}). Agreed to receive WhatsApp recovery link.`
+    sentiment,
+    summary: `Customer stated: "${effectiveUserSpeech}". Agent responded dynamically and scheduled next action for ${promisedIso || 'immediate review'}.`
   };
 }
 

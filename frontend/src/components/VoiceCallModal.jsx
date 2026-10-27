@@ -97,8 +97,11 @@ export default function VoiceCallModal({ isOpen, onClose, customerName, amount, 
         callResult = backendRes?.result?.voiceResult || backendRes?.result || backendRes;
         setExtractedData(callResult);
 
-        if (callResult?.transcript && callResult.transcript.length > 2) {
-          aiResponseText = callResult.transcript[2].text || aiResponseText;
+        if (callResult?.agentReply) {
+          aiResponseText = callResult.agentReply;
+        } else if (callResult?.transcript && callResult.transcript.length > 2) {
+          const agentMsgs = callResult.transcript.filter(t => t.speaker === 'Agent');
+          aiResponseText = agentMsgs.length > 1 ? agentMsgs[agentMsgs.length - 1].text : (callResult.transcript[2]?.text || aiResponseText);
         } else if (callResult?.summary) {
           aiResponseText = `Theek hai ${customerName || 'ji'}, maine aapka commitment note kar liya hai aur reminder set kar diya hai. Thank you!`;
         }
@@ -341,3 +344,4 @@ export default function VoiceCallModal({ isOpen, onClose, customerName, amount, 
     </div>
   );
 }
+
