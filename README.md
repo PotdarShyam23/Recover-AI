@@ -66,67 +66,12 @@ Database (MongoDB via Mongoose / Dual-Mode In-Memory Fallback)
 
 ---
 
-## Quick Start
-
-### 1. Install Dependencies
-```bash
-npm run install:all
-```
-Installs all backend and frontend dependencies.
-
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-In `.env`:
-- **MongoDB**: Put your MongoDB Atlas connection string in `MONGODB_URI` (e.g., `mongodb+srv://<user>:<password>@cluster.mongodb.net/recoverai?retryWrites=true&w=majority`). *(If left empty, the app runs in safe in-memory fallback mode).*
-- **Google Gemini**: Add your `GEMINI_API_KEY` for live LLM reasoning (or let it run in contextual fallback mode).
-- **Razorpay**: Set `RAZORPAY_WEBHOOK_SECRET` (defaults to `test_recoverai_secret_12345`).
-- **Twilio Voice & WhatsApp**:
-  - `TWILIO_ACCOUNT_SID`: Your Twilio Account SID.
-  - `TWILIO_AUTH_TOKEN`: Your Twilio Auth Token.
-  - `TWILIO_PHONE_NUMBER`: Your purchased Twilio phone number.
-  - `TWILIO_WHATSAPP_NUMBER`: Sandbox default is `whatsapp:+14155238886`.
-  - `SERVER_PUBLIC_URL`: Your ngrok HTTPS URL (e.g. `https://xxxx.ngrok-free.app`) for Twilio speech and WhatsApp webhooks.
-
-### 3. Run Automated Test Suite
-```bash
-npm --prefix backend test
-```
-Runs **16 automated tests** verifying HMAC signatures, multi-agent decisions, Hinglish voice dialogues, real Twilio phone call formatting & inbound TwiML, real Twilio WhatsApp messaging & replies, promise extraction, and revenue attribution.
-
-### 4. Start Development Servers
-```bash
-npm run dev
-```
-Starts both the Express backend (Port **4001**) and React Vite frontend (Port **5173**).
-
-Open your browser at **http://localhost:5173**.
-
----
 
 ## How to Test Live Features
 
-### 1. Test Real Phone Calls (Voice Call Lab)
-1. Go to **`📞 Twilio Voice Call`** in the sidebar.
-2. Enter your mobile number (e.g. `+91 98765 43210`).
-3. Click **"Place Real Call to Customer Phone"**.
-4. Your phone rings! Answer it:
-   - Amazon Polly *Aditi* speaks in natural Hinglish: *"Namaste Shyam ji! This is an AI recovery assistance call from SaaSify India..."*
-   - Reply: *"Friday ko salary aane wali hai, tab pakka kar dunga"*.
-   - Twilio's speech recognition captures your response, extracts the date, and logs it in the **Promise Tracker**!
-5. **To test incoming calls**: Dial your Twilio number directly from your phone. The AI answers, checks your number for any pending payment, and converses with you.
 
-### 2. Test Real WhatsApp Recovery (WhatsApp Lab)
-1. Join the Twilio WhatsApp Sandbox: Open WhatsApp and send `join <your-sandbox-code>` to **+1 415 523 8886**.
-2. Go to **`💬 Twilio WhatsApp`** in the sidebar.
-3. Enter your phone number and click **"Send Real WhatsApp Recovery Message"**.
-4. The message arrives on your WhatsApp with an authentic 1-click Razorpay payment link.
-5. Reply on WhatsApp: *"Friday ko salary aayegi tab kar dunga"*.
-6. The AI catches your reply, extracts the commitment date, saves it, and replies with an instant confirmation!
 
-### 3. Test Razorpay Failure Scenarios (Test Lab)
+###. Test Razorpay Failure Scenarios (Test Lab)
 1. Go to **`🧪 Test Lab & Webhooks`** in the sidebar.
 2. Choose a pre-built scenario:
    - *UPI Drop-off / 3DS Timeout* (High Intent)
@@ -136,32 +81,8 @@ Open your browser at **http://localhost:5173**.
 
 ---
 
-## Environment Variables Reference
 
-| Variable | Required | Description |
-| :--- | :--- | :--- |
-| `PORT` | Optional | Backend port (default: `4001`). |
-| `FRONTEND_URL` | Optional | Frontend URL (default: `http://localhost:5173`). |
-| `MONGODB_URI` | Recommended | MongoDB Atlas connection string. Safe in-memory fallback used if empty. |
-| `GEMINI_API_KEY` | Recommended | Google Gemini API key for dynamic multi-agent reasoning. Contextual fallback used if absent. |
-| `GEMINI_MODEL` | Optional | Gemini model name (default: `gemini-3.6-flash`). |
-| `RAZORPAY_WEBHOOK_SECRET` | Required | Webhook secret for HMAC-SHA256 signature verification. |
-| `RAZORPAY_KEY_ID` | Optional | Razorpay test key ID. |
-| `RAZORPAY_KEY_SECRET` | Optional | Razorpay test key secret. |
-| `TWILIO_ACCOUNT_SID` | Optional | Twilio Account SID for live phone calls and WhatsApp. |
-| `TWILIO_AUTH_TOKEN` | Optional | Twilio Auth Token for live phone calls and WhatsApp. |
-| `TWILIO_PHONE_NUMBER` | Optional | Active Twilio phone number (caller ID). |
-| `TWILIO_WHATSAPP_NUMBER` | Optional | Twilio WhatsApp sender number (sandbox: `whatsapp:+14155238886`). |
-| `SERVER_PUBLIC_URL` | Optional | Public ngrok or domain URL for Twilio speech and WhatsApp webhooks. |
 
----
-
-## Test Suite Summary
-
-Run all tests via:
-```bash
-npm --prefix backend test
-```
 
 Test coverage includes:
 * **Razorpay HMAC Signatures**: Verifies authentic and rejects tampered signatures.
