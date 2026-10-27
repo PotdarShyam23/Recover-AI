@@ -16,11 +16,15 @@ app.use(cors({
   credentials: true
 }));
 
+// Parse JSON bodies with rawBody preserved for Razorpay HMAC verification
 app.use(express.json({
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
   }
 }));
+
+// Parse URL-encoded bodies for incoming Twilio Voice webhooks & speech gathers
+app.use(express.urlencoded({ extended: true }));
 
 // Initialize baseline demo seed data (merchant & customers)
 seedInitialData().catch(err => console.warn('Seed initialization error:', err.message));
@@ -44,7 +48,7 @@ app.use(express.static(frontendDistPath));
 
 // For all non-API GET routes, serve frontend index.html for client-side routing
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/webhooks')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/webhooks') || req.path.startsWith('/twilio')) {
     return next();
   }
   res.sendFile(path.join(frontendDistPath, 'index.html'));

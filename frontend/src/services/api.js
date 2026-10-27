@@ -60,6 +60,44 @@ export const api = {
       method: 'POST'
     }),
 
+  // Twilio Voice Services
+  getTwilioStatus: () => fetchJson('/twilio/status'),
+
+  updateTwilioConfig: (data) =>
+    fetchJson('/twilio/config', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  placeTwilioCall: (data) =>
+    fetchJson('/twilio/voice/call', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  triggerCaseTwilioCall: (id, data = {}) =>
+    fetchJson(`/recovery-cases/${id}/twilio-call`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  getCallStatus: (callSid) => fetchJson(`/twilio/call/${callSid}`),
+
+  // Twilio WhatsApp Services
+  getWhatsAppStatus: () => fetchJson('/twilio/whatsapp/status'),
+
+  sendDirectWhatsApp: (data) =>
+    fetchJson('/twilio/whatsapp/send', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  sendCaseWhatsApp: (id, data = {}) =>
+    fetchJson(`/recovery-cases/${id}/twilio-whatsapp`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
   // Promises & Audit
   getPromises: () => fetchJson('/promises'),
   getAuditLogs: () => fetchJson('/audit'),

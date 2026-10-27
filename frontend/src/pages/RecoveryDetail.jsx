@@ -71,6 +71,52 @@ export default function RecoveryDetail() {
     }
   }
 
+  async function handleRealTwilioCall() {
+    const defaultPhone = caseData?.customer?.phone || '+91';
+    const targetPhone = prompt('Enter customer phone number to dial via Twilio:', defaultPhone);
+    if (!targetPhone) return;
+
+    setActionLoading(true);
+    try {
+      const res = await api.triggerCaseTwilioCall(id, { phone: targetPhone.trim() });
+      if (res && res.ok) {
+        if (res.result?.mode === 'live_twilio') {
+          alert(`📞 Real Twilio Call initiated to ${res.result.to}! Call SID: ${res.result.callSid}`);
+        } else {
+          alert(`Twilio Notice: ${res.result?.message || 'Call triggered in safe simulation mode.'}`);
+        }
+        await loadCase();
+      }
+    } catch (err) {
+      alert('Twilio Call Error: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleRealTwilioWhatsApp() {
+    const defaultPhone = caseData?.customer?.phone || '+91';
+    const targetPhone = prompt('Enter customer WhatsApp phone number to send message via Twilio:', defaultPhone);
+    if (!targetPhone) return;
+
+    setActionLoading(true);
+    try {
+      const res = await api.sendCaseWhatsApp(id, { phone: targetPhone.trim() });
+      if (res && res.ok) {
+        if (res.result?.mode === 'live_twilio') {
+          alert(`💬 Real Twilio WhatsApp message sent to ${res.result.to}! Message SID: ${res.result.messageSid}`);
+        } else {
+          alert(`Twilio Notice: ${res.result?.message || 'WhatsApp message simulated.'}`);
+        }
+        await loadCase();
+      }
+    } catch (err) {
+      alert('Twilio WhatsApp Error: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   if (loading) return <div className="card panel">Loading case details…</div>;
   if (!caseData) return <div className="card panel">Case not found.</div>;
 
@@ -190,6 +236,22 @@ export default function RecoveryDetail() {
             </p>
 
             <div className="button-group">
+              <button
+                type="button"
+                onClick={handleRealTwilioWhatsApp}
+                disabled={actionLoading}
+                style={{ background: 'linear-gradient(135deg, #22c55e, #10b981)', color: '#021820', fontSize: '0.95rem' }}
+              >
+                💬 Real Twilio WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={handleRealTwilioCall}
+                disabled={actionLoading}
+                style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)', color: '#021820', fontSize: '0.95rem' }}
+              >
+                📱 Real Twilio Phone Call
+              </button>
               <button
                 type="button"
                 onClick={() => setIsVoiceModalOpen(true)}

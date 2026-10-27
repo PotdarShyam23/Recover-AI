@@ -2,6 +2,7 @@ import { dbStore } from '../db/store.js';
 import { decideRecoveryStrategy, generateOutreachMessage, simulateHinglishVoiceCall, parseCustomerIntent } from './aiService.js';
 import { evaluatePolicyGuardrails } from './recoveryPolicy.js';
 import razorpayProvider from '../adapters/payment/razorpayProvider.js';
+import twilioWhatsAppService from './twilioWhatsAppService.js';
 
 export class RecoveryEngine {
   /**
@@ -172,6 +173,22 @@ export class RecoveryEngine {
     caseRecord.status = 'CONTACTED';
     await dbStore.saveCase(caseRecord);
 
+    // If channel is WhatsApp, attempt live Twilio WhatsApp delivery
+    let twilioResult = null;
+    if (channel === 'whatsapp' && customer.phone) {
+      try {
+        twilioResult = await twilioWhatsAppService.sendOutboundWhatsApp({
+          to: customer.phone,
+          messageText: copy.messageText,
+          paymentLink: caseRecord.recoveryLinkUrl,
+          customerName: customer.name,
+          caseId: caseRecord.id
+        });
+      } catch (err) {
+        console.warn('[RecoveryEngine] WhatsApp dispatch note:', err.message);
+      }
+    }
+
     // Record Communication Log
     // now saving the talks of customer and user in mongoDB
     const commLog = {
@@ -183,8 +200,8 @@ export class RecoveryEngine {
       recipient: channel === 'whatsapp' ? customer.phone : customer.email,
       messageText: copy.messageText,// gemeini mssg
       paymentLink: caseRecord.recoveryLinkUrl,
-      status: 'SENT',
-      metadata: { headline: copy.headline, callToAction: copy.callToAction }
+      status: twilioResult?.success ? 'SENT' : (twilioResult?.mode === 'simulated' ? 'SIMULATED' : 'SENT'),
+      metadata: { headline: copy.headline, callToAction: copy.callToAction, twilioResult }
     };
     await dbStore.logCommunication(commLog);
 

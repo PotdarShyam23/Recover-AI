@@ -6,6 +6,8 @@ import RecoveryDetail from './pages/RecoveryDetail';
 import Promises from './pages/Promises';
 import AuditLog from './pages/AuditLog';
 import Demo from './pages/Demo';
+import VoiceCallPage from './pages/VoiceCallPage';
+import WhatsAppPage from './pages/WhatsAppPage';
 
 export default function App() {
   return (
@@ -27,6 +29,12 @@ export default function App() {
             <NavLink to="/cases" className={({ isActive }) => (isActive ? 'active' : '')}>
               📁 Recovery Cases
             </NavLink>
+            <NavLink to="/voice-call" className={({ isActive }) => (isActive ? 'active' : '')}>
+              📞 Twilio Voice Call
+            </NavLink>
+            <NavLink to="/whatsapp" className={({ isActive }) => (isActive ? 'active' : '')}>
+              💬 Twilio WhatsApp
+            </NavLink>
             <NavLink to="/promises" className={({ isActive }) => (isActive ? 'active' : '')}>
               🤝 Promise Tracker
             </NavLink>
@@ -41,8 +49,8 @@ export default function App() {
 
         <div style={{ padding: '14px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', fontSize: '0.78rem', color: 'var(--muted)' }}>
           <div><strong>Stack:</strong> MERN Architecture</div>
-          <div><strong>Database:</strong> MongoDB Mongoose</div>
-          <div><strong>Voice:</strong> Hinglish AI Agent</div>
+          <div><strong>Channels:</strong> Twilio Voice & WhatsApp</div>
+          <div><strong>Intelligence:</strong> Gemini Multi-Agent</div>
         </div>
       </aside>
 
@@ -51,6 +59,8 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/cases" element={<RecoveryCases />} />
           <Route path="/cases/:id" element={<RecoveryDetail />} />
+          <Route path="/voice-call" element={<VoiceCallPage />} />
+          <Route path="/whatsapp" element={<WhatsAppPage />} />
           <Route path="/promises" element={<Promises />} />
           <Route path="/audit" element={<AuditLog />} />
           <Route path="/demo" element={<Demo />} />
